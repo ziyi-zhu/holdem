@@ -27,7 +27,7 @@ repos:
         additional_dependencies: [flake8-docstrings]
         args: [
             "--max-line-length=88",
-            "--extend-ignore=E203,D100,D101,D102,D104,D107,D205,D400,E501",
+            "--extend-ignore=E203,D100,D101,D102,D104,D105,D107,D205,D400,E501",
             "--per-file-ignores=__init__.py:F401,tests/*:D103"
         ]
 

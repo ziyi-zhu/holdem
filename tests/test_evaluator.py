@@ -355,7 +355,7 @@ def test_hand_comparisons():
         royal_flush,
     ]
 
-    evaluations = [Evaluator._get_hand_score(hand) for hand in hands]
+    evaluations = [Evaluator.evaluate(hand[:2], hand[2:]) for hand in hands]
 
     # Verify that each hand beats all previous hands
     for i in range(1, len(evaluations)):
@@ -386,9 +386,7 @@ def test_tie_breaker_kickers():
     eval1 = Evaluator.evaluate(hole_cards1, community_cards)
     eval2 = Evaluator.evaluate(hole_cards2, community_cards)
 
-    assert (
-        eval1.score > eval2.score
-    ), "Hand with Queen kicker should beat hand with Jack kicker"
+    assert eval2 < eval1, "Hand with Queen kicker should beat hand with Jack kicker"
     assert (
         eval1.hand_type == eval2.hand_type == HandType.TWO_PAIR
     ), "Both hands should be Two Pair"
@@ -419,7 +417,7 @@ def test_tie_breaker_pair_rank():
     eval1 = Evaluator.evaluate(hole_cards1, community_cards)
     eval2 = Evaluator.evaluate(hole_cards2, community_cards)
 
-    assert eval1.score > eval2.score, "Kings and Tens should beat Kings and Nines"
+    assert eval2 < eval1, "Kings and Tens should beat Kings and Nines"
     assert (
         eval1.hand_type == eval2.hand_type == HandType.TWO_PAIR
     ), "Both hands should be Two Pair"
@@ -450,7 +448,7 @@ def test_fifth_card_kicker():
     eval1 = Evaluator.evaluate(hole_cards1, community_cards)
     eval2 = Evaluator.evaluate(hole_cards2, community_cards)
 
-    assert eval1.score > eval2.score, "Hand with higher fifth card should win"
+    assert eval2 < eval1, "Hand with higher fifth card should win"
     assert eval1.hand_type == eval2.hand_type == HandType.HIGH_CARD
     assert eval1.ranks[4] > eval2.ranks[4], "Seven kicker > Six kicker"
 
@@ -479,9 +477,7 @@ def test_full_house_tie_breaker():
     eval1 = Evaluator.evaluate(hole_cards1, community_cards)
     eval2 = Evaluator.evaluate(hole_cards2, community_cards)
 
-    assert (
-        eval1.score > eval2.score
-    ), "Kings full of Aces should beat Kings full of Queens"
+    assert eval2 < eval1, "Kings full of Aces should beat Kings full of Queens"
     assert eval1.hand_type == eval2.hand_type == HandType.FULL_HOUSE
     assert eval1.ranks[0] == eval2.ranks[0], "Both have Kings as trips"
     assert eval1.ranks[1] > eval2.ranks[1], "Aces > Queens in the pair part"
@@ -514,7 +510,7 @@ def test_four_of_a_kind_kicker():
     eval2 = Evaluator.evaluate(hole_cards2, community_cards)
 
     assert (
-        eval1.score > eval2.score
+        eval2 < eval1
     ), "Four Kings with Ace kicker should beat Four Kings with Queen kicker"
     assert eval1.hand_type == eval2.hand_type == HandType.FOUR_OF_A_KIND
     assert eval1.ranks[0] == eval2.ranks[0], "Both have Kings as quads"
@@ -547,7 +543,7 @@ def test_different_straight_ranks():
     eval1 = Evaluator.evaluate(hole_cards1, community_cards)
     eval2 = Evaluator.evaluate(hole_cards2, community_cards)
 
-    assert eval1.score > eval2.score, "9-high straight should beat 8-high straight"
+    assert eval2 < eval1, "9-high straight should beat 8-high straight"
     assert eval1.hand_type == eval2.hand_type == HandType.STRAIGHT
     assert eval1.ranks[0] > eval2.ranks[0], "9-high > 8-high"
 
@@ -578,9 +574,7 @@ def test_wheel_vs_higher_straight():
     eval1 = Evaluator.evaluate(hole_cards1, community_cards)
     eval2 = Evaluator.evaluate(hole_cards2, community_cards)
 
-    assert (
-        eval2.score > eval1.score
-    ), "6-high straight should beat wheel straight (A-5-4-3-2)"
+    assert eval1 < eval2, "6-high straight should beat wheel straight (A-5-4-3-2)"
     assert eval1.hand_type == eval2.hand_type == HandType.STRAIGHT
     assert eval1.ranks[0] < eval2.ranks[0], "Wheel's high card (5) < 6-high straight"
 
@@ -619,7 +613,7 @@ def test_flush_comparison():
     eval1 = Evaluator.evaluate(hole_cards1, community_cards1)
     eval2 = Evaluator.evaluate(hole_cards2, community_cards2)
 
-    assert eval1.score > eval2.score, "Ace-high flush should beat King-high flush"
+    assert eval2 < eval1, "Ace-high flush should beat King-high flush"
     assert eval1.hand_type == eval2.hand_type == HandType.FLUSH
     assert eval1.ranks[0] > eval2.ranks[0], "Ace > King as high card"
 
@@ -662,9 +656,7 @@ def test_evaluate_with_hole_and_community():
         straight_flush_hole, straight_flush_community
     )
 
-    assert (
-        evaluation.score > straight_flush_eval.score
-    ), "Royal flush should beat straight flush"
+    assert evaluation > straight_flush_eval, "Royal flush should beat straight flush"
 
 
 # Additional tests for ties, tie breakers, and edge cases
@@ -691,7 +683,7 @@ def test_identical_hands_tie():
     eval1 = Evaluator.evaluate(hand1[:2], hand1[2:])
     eval2 = Evaluator.evaluate(hand2[:2], hand2[2:])
 
-    assert eval1.score == eval2.score, "Identical hand ranks should tie"
+    assert eval1 == eval2, "Identical hand ranks should tie"
     assert eval1.hand_type == eval2.hand_type, "Hand types should be the same"
     assert eval1.ranks == eval2.ranks, "Ranks should be identical"
 
@@ -714,7 +706,7 @@ def test_pydantic_model_serialization():
     eval_dict = evaluation.model_dump()
 
     assert eval_dict["hand_type"] == HandType.ROYAL_FLUSH
-    assert isinstance(eval_dict["score"], int)
+    assert isinstance(eval_dict["ranks"], list)
     # When serialized to dict, Enum values are converted to their integer values
     assert [int(r) for r in evaluation.ranks] == [14, 13, 12, 11, 10]
 
@@ -837,9 +829,7 @@ def test_same_rank_different_full_house():
     eval1 = Evaluator.evaluate(hole_cards1, community_cards)
     eval2 = Evaluator.evaluate(hole_cards2, community_cards)
 
-    assert (
-        eval1.score > eval2.score
-    ), "Kings full of Queens should beat Kings full of Jacks"
+    assert eval1 > eval2, "Kings full of Queens should beat Kings full of Jacks"
     assert eval1.hand_type == eval2.hand_type == HandType.FULL_HOUSE
     assert eval1.ranks[0] == eval2.ranks[0] == Rank.KING, "Both have Kings as trips"
     assert eval1.ranks[1] > eval2.ranks[1], "Queens > Jacks in the pair part"
@@ -869,9 +859,7 @@ def test_same_straight_different_suits():
     eval1 = Evaluator.evaluate(hole_cards1, community_cards)
     eval2 = Evaluator.evaluate(hole_cards2, community_cards)
 
-    assert (
-        eval1.score == eval2.score
-    ), "Same straight values should tie regardless of suits"
+    assert eval1 == eval2, "Same straight values should tie regardless of suits"
     assert eval1.hand_type == eval2.hand_type == HandType.STRAIGHT
     assert eval1.ranks == eval2.ranks, "Ranks should be identical"
 
@@ -908,9 +896,7 @@ def test_higher_straight_flush():
     eval1 = Evaluator.evaluate(hole_cards1, community_cards1)
     eval2 = Evaluator.evaluate(hole_cards2, community_cards2)
 
-    assert (
-        eval1.score > eval2.score
-    ), "King-high straight flush should beat 9-high straight flush"
+    assert eval1 > eval2, "King-high straight flush should beat 9-high straight flush"
     assert eval1.hand_type == eval2.hand_type == HandType.STRAIGHT_FLUSH
     assert eval1.ranks[0] > eval2.ranks[0], "King > 9 as high card"
 
@@ -947,7 +933,7 @@ def test_royal_flush_different_suits():
     eval1 = Evaluator.evaluate(hole_cards1, community_cards1)
     eval2 = Evaluator.evaluate(hole_cards2, community_cards2)
 
-    assert eval1.score == eval2.score, "Royal flushes in different suits should tie"
+    assert eval1 == eval2, "Royal flushes in different suits should tie"
     assert eval1.hand_type == eval2.hand_type == HandType.ROYAL_FLUSH
     assert eval1.ranks == eval2.ranks, "Ranks should be identical"
 
@@ -977,7 +963,7 @@ def test_three_of_a_kind_kicker_comparison():
     eval2 = Evaluator.evaluate(hole_cards2, community_cards)
 
     assert (
-        eval1.score > eval2.score
+        eval1 > eval2
     ), "Kings with Ace-Queen kickers should beat Kings with Jack-Queen kickers"
     assert eval1.hand_type == eval2.hand_type == HandType.THREE_OF_A_KIND
     assert eval1.ranks[0] == eval2.ranks[0], "Both have Kings as trips"

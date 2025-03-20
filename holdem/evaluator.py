@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections import Counter
 from enum import IntEnum
 from typing import List, Tuple
@@ -22,8 +24,36 @@ class HandType(IntEnum):
 
 class HandEvaluation(BaseModel):
     hand_type: HandType
-    score: int
     ranks: List[Rank]
+
+    def __lt__(self, other: object) -> bool:
+        if not isinstance(other, HandEvaluation):
+            return NotImplemented
+        if self.hand_type != other.hand_type:
+            return self.hand_type < other.hand_type
+
+        # Compare ranks recursively
+        for self_rank, other_rank in zip(self.ranks, other.ranks):
+            if self_rank != other_rank:
+                return self_rank < other_rank
+        return len(self.ranks) < len(other.ranks)
+
+    def __gt__(self, other: object) -> bool:
+        return not self.__lt__(other)
+
+    def __le__(self, other: object) -> bool:
+        return self.__lt__(other) or self.__eq__(other)
+
+    def __ge__(self, other: object) -> bool:
+        return self.__gt__(other) or self.__eq__(other)
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, HandEvaluation):
+            return NotImplemented
+        return self.hand_type == other.hand_type and self.ranks == other.ranks
+
+    def __ne__(self, other: object) -> bool:
+        return not self.__eq__(other)
 
 
 class Evaluator:
@@ -51,28 +81,7 @@ class Evaluator:
             raise ValueError("Cannot evaluate poker hand with fewer than 5 cards")
 
         hand_type, ranks = cls._get_hand_type(all_cards)
-        score = cls._get_hand_score(all_cards)
-
-        return HandEvaluation(hand_type=hand_type, score=score, ranks=ranks)
-
-    @classmethod
-    def _get_hand_score(cls, cards: List[Card]) -> int:
-        """Calculate the score for the best 5-card hand from the given cards."""
-        # Check for each hand type, from best to worst
-        hand_type, hand_ranks = cls._get_hand_type(cards)
-
-        # Base score is the hand type multiplied by a large number to ensure
-        # a better hand type always beats a lesser hand type
-        base_score = hand_type.value * 10**15
-
-        # Add additional points based on the ranks within the hand
-        # (this handles ties within the same hand type)
-        rank_score = 0
-        for i, rank in enumerate(hand_ranks):
-            # Multiply by decreasing powers of 100 to prioritize higher cards
-            rank_score += int(rank) * (100 ** (5 - i))
-
-        return base_score + rank_score
+        return HandEvaluation(hand_type=hand_type, ranks=ranks)
 
     @classmethod
     def _get_hand_type(cls, cards: List[Card]) -> Tuple[HandType, List[Rank]]:
