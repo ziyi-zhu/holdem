@@ -113,10 +113,11 @@ class Player(BaseModel):
     name: str
     chips: int
     hand: List[Card] = Field(default_factory=list)
-    is_active: bool = True
+    is_folded: bool = False
 
     def reset(self):
         self.hand = []
+        self.is_folded = False
 
     def make_decision(self, table: Table) -> Action:
         raise NotImplementedError("Subclasses must implement this method")
